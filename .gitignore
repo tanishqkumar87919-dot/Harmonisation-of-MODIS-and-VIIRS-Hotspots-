@@ -1,0 +1,88 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+.venv/
+venv/
+env/
+ENV/
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+coverage/
+*.cover
+*.py,cover
+
+# Python build & bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Next.js build
+.next/
+out/
+
+# Environment files
+.env
+.env*.local
+.env.development
+.env.test
+.env.production
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# OS & Editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Large geospatial & raw data files (exclude everywhere except data/samples/)
+*.csv
+*.tsv
+*.geojson
+*.jsonl
+*.parquet
+*.feather
+*.tif
+*.tiff
+*.hdf
+*.hdf5
+*.h5
+*.nc
+*.nc4
+*.zip
+*.tar
+*.tar.gz
+*.gz
+
+# Allow curated sample fixtures in data/samples
+!data/samples/*.csv
+!data/samples/*.geojson
+!data/samples/*.json
+!data/samples/README.md
