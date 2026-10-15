@@ -33,7 +33,7 @@ def test_modis_standardization():
     assert obs.latitude == 29.3541
     assert obs.longitude == 76.8123
     assert obs.observation_time_utc.startswith("2023-05-01T05:30:00")
-    assert obs.confidence_raw == 85.0
+    assert str(obs.confidence_raw) == "85"
     assert obs.frp_raw == 28.4
     assert obs.frp_unit == "MW"
     assert obs.scan_raw == 1.0

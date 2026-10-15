@@ -3,8 +3,8 @@
 from typing import List, Tuple
 from backend.app.schemas.common import MatchStatus
 from backend.app.schemas.matching import HarmonisedRecord, MatchingParameters
-from backend.app.schemas.observation import StandardizedObservation
-from backend.app.schemas.run import (
+from backend.app.schemas.observations import StandardizedObservationSchema
+from backend.app.schemas.runs import (
     BaselineComparisonMetrics,
     DistributionBin,
     FrpDistribution,
@@ -12,7 +12,7 @@ from backend.app.schemas.run import (
     RunDetailedEvaluation,
     SensitivityGridPoint,
 )
-from backend.app.services.matching import MatchingEngine
+from backend.app.services.matching_engine import MatchingEngineService
 
 
 class EvaluationService:
@@ -53,19 +53,17 @@ class EvaluationService:
         cls,
         summary: ProcessingRunSummary,
         records: List[HarmonisedRecord],
-        modis_observations: List[StandardizedObservation],
-        viirs_observations: List[StandardizedObservation],
+        modis_observations: List[StandardizedObservationSchema],
+        viirs_observations: List[StandardizedObservationSchema],
     ) -> RunDetailedEvaluation:
         """
         Generate detailed evaluation metrics for a completed harmonisation run.
         """
-        # 1. Baseline Comparisons
         total_modis = len(modis_observations)
         total_viirs = len(viirs_observations)
         raw_total = total_modis + total_viirs
 
         # Baseline 1: Raw Unharmonised Concatenation
-        # Approximate colocated duplicates in raw union
         raw_unique_locations = len(
             {(round(obs.latitude, 2), round(obs.longitude, 2)) for obs in modis_observations + viirs_observations}
         )
@@ -74,9 +72,13 @@ class EvaluationService:
         # Baseline 2: Time-Window Coincidence Only (no spatial filter)
         time_only_matches = 0
         for m in modis_observations:
-            m_dt = MatchingEngine.parse_iso_utc(m.observation_time_utc)
+            m_dt = MatchingEngineService.parse_datetime(m.observation_time_utc)
+            if not m_dt:
+                continue
             for v in viirs_observations:
-                v_dt = MatchingEngine.parse_iso_utc(v.observation_time_utc)
+                v_dt = MatchingEngineService.parse_datetime(v.observation_time_utc)
+                if not v_dt:
+                    continue
                 if abs((m_dt - v_dt).total_seconds()) <= summary.parameters.max_time_difference_seconds:
                     time_only_matches += 1
                     break
@@ -119,12 +121,13 @@ class EvaluationService:
                     matching_method_version=summary.method_version,
                     quality_filters=summary.parameters.quality_filters,
                 )
-                _, _, test_summary = MatchingEngine.execute_matching_run(
+                engine_res = MatchingEngineService.run_harmonisation(
                     run_id=f"sens-{int(s_thresh)}-{int(t_thresh)}",
                     modis_observations=modis_observations,
                     viirs_observations=viirs_observations,
                     parameters=test_params,
                 )
+                test_summary = engine_res.summary_report
                 sensitivity_grid.append(
                     SensitivityGridPoint(
                         spatial_threshold_m=s_thresh,

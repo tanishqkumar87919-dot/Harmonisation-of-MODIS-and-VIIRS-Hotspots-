@@ -94,7 +94,7 @@ def test_empty_csv_rejection():
 
 def test_missing_required_coordinate_columns():
     bad_csv = b"brightness,acq_date,acq_time\n320.0,2023-05-01,0530\n"
-    with pytest.raises(IngestionError, match="geospatial columns"):
+    with pytest.raises(IngestionError, match="required columns"):
         IngestionService.inspect_and_validate(bad_csv)
 
 

@@ -313,7 +313,7 @@ class StandardizationService:
 
             # Construct StandardizedObservationSchema (Retaining rejected rows per requirements)
             obs = StandardizedObservationSchema(
-                observation_id=f"obs-{uuid.uuid4().hex[:12]}",
+                observation_id=f"obs-{sensor.value.lower()}-{uuid.uuid4().hex[:10]}",
                 dataset_id=dataset_id,
                 source_record_id=source_rec_id,
                 source_sensor=sensor,
@@ -438,6 +438,29 @@ class StandardizationService:
         )
 
         return report, dataset_record, observations
+
+    @classmethod
+    def standardize_records(
+        cls,
+        df: pd.DataFrame,
+        dataset: DatasetRecordSchema,
+        ingestion_run_id: Optional[str] = None,
+    ) -> List[StandardizedObservationSchema]:
+        """Backwards compatible helper returning observations list."""
+        renamed_df, _ = IngestionService.normalize_column_names(df) if "latitude" not in df.columns else (df, {})
+        from backend.app.services.ingestion import IngestionService
+        _, _, observations = cls.process_and_standardize(
+            df_raw=df,
+            dataset_id=dataset.id,
+            sensor=dataset.sensor,
+            product_name=dataset.product_name,
+            product_version=dataset.product_version,
+            source_uri=dataset.source_uri,
+            checksum=dataset.checksum,
+            ingestion_run_id=ingestion_run_id or "ingest-legacy",
+            is_test_fixture=dataset.is_test_fixture,
+        )
+        return observations
 
     @classmethod
     def get_eligible_observations(

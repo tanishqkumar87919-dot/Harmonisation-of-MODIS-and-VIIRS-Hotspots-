@@ -55,7 +55,9 @@ def create_processing_run(payload: RunCreateRequest) -> ProcessingRunSummary:
 
     run_id = f"run-{uuid.uuid4().hex[:12]}"
 
-    records, candidates, summary = MatchingEngine.execute_matching_run(
+    from backend.app.services.matching_engine import MatchingEngineService
+
+    engine_result = MatchingEngineService.run_harmonisation(
         run_id=run_id,
         modis_observations=eligible_modis,
         viirs_observations=eligible_viirs,
@@ -67,6 +69,10 @@ def create_processing_run(payload: RunCreateRequest) -> ProcessingRunSummary:
         modis_rejected_count=modis_ds.rejected_rows,
         viirs_rejected_count=viirs_ds.rejected_rows,
     )
+
+    records = engine_result.harmonised_records
+    candidates = engine_result.match_candidates
+    summary = engine_result.summary_report
 
     evaluation = EvaluationService.generate_evaluation(
         summary=summary,
