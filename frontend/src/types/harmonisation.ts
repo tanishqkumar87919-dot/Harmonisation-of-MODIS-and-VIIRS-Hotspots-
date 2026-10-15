@@ -284,6 +284,40 @@ export interface SensitivityGridPoint {
   unmatched_modis_count: number;
   unmatched_viirs_count: number;
   match_rate: number;
+  viirs_match_rate?: number;
+  ambiguity_rate?: number;
+}
+
+export interface FourBaselinesComparison {
+  modis_only: {
+    valid_modis_count: number;
+    date_range: [string, string];
+    bbox: [number, number, number, number];
+    frp_mean?: number;
+    frp_median?: number;
+  };
+  viirs_only: {
+    valid_viirs_count: number;
+    date_range: [string, string];
+    bbox: [number, number, number, number];
+    frp_mean?: number;
+    frp_median?: number;
+  };
+  naive_concatenation: {
+    total_naive_count: number;
+    estimated_duplicate_overlap_count: number;
+  };
+  proposed_harmonisation: {
+    matched_count: number;
+    unmatched_modis_count: number;
+    unmatched_viirs_count: number;
+    ambiguous_count: number;
+    distinct_harmonised_records_count: number;
+    modis_match_rate: number;
+    modis_match_rate_denominator: string;
+    viirs_match_rate: number;
+    viirs_match_rate_denominator: string;
+  };
 }
 
 export interface RunDetailedEvaluation {
@@ -297,6 +331,9 @@ export interface RunDetailedEvaluation {
     viirs_frp: Array<{ bin: string; count: number }>;
     scientific_disclaimer: string;
   };
+  four_baselines?: FourBaselinesComparison;
+  frp_percentiles?: Record<string, { p10: number; p25: number; p50: number; p75: number; p90: number; mean: number }>;
+  temporal_hourly_distribution?: Array<{ bin: string; count: number }>;
 }
 
 /**

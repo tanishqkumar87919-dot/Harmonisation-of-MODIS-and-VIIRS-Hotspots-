@@ -213,6 +213,22 @@ export const apiClient = {
   },
 
   /**
+   * Run custom sensitivity threshold grid (POST /api/runs/{run_id}/sensitivity)
+   */
+  async runCustomSensitivity(
+    runId: string,
+    grid: { distance_thresholds_m: number[]; time_thresholds_s: number[] }
+  ): Promise<SensitivityGridPoint[]> {
+    return request<SensitivityGridPoint[]>(`/runs/${runId}/sensitivity`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(grid),
+    });
+  },
+
+  /**
    * Formulate export download URL (GET /api/runs/{run_id}/export)
    */
   getRunExportUrl(runId: string, format: 'csv' | 'geojson', filters?: MapFilterState): string {
