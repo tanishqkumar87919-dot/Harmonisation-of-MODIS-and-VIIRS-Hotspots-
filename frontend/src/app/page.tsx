@@ -1,14 +1,70 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useFixtureMode } from '@/lib/fixtures/FixtureContext';
-import { FIXTURE_RUN_SUMMARY } from '@/lib/fixtures/labelledTestFixtures';
-import { SensorBadge, MatchStatusBadge } from '@/components/common/Badges';
-import { EmptyState } from '@/components/common/StateViews';
-import { Flame, Sliders, Database, ArrowRight } from 'lucide-react';
+import {
+  FIXTURE_RUN_SUMMARY,
+  FIXTURE_MODIS_DATASET,
+  FIXTURE_VIIRS_DATASET,
+} from '@/lib/fixtures/labelledTestFixtures';
+import { apiClient, ApiError } from '@/lib/api/client';
+import { DatasetRecord, ProcessingRunSummary } from '@/types/harmonisation';
+import { StudyContextBanner } from '@/components/dashboard/StudyContextBanner';
+import { QualityAndMatchKpiGrid } from '@/components/dashboard/QualityAndMatchKpiGrid';
+import { LatestRunStatusCard } from '@/components/dashboard/LatestRunStatusCard';
+import { EmptyState, ErrorAlert, LoadingState } from '@/components/common/StateViews';
+import { Flame, Sliders, RefreshCw, Database } from 'lucide-react';
 
 export default function OverviewDashboardPage() {
   const { isFixtureMode } = useFixtureMode();
+
+  const [loading, setLoading] = useState<boolean>(!isFixtureMode);
+  const [error, setError] = useState<ApiError | null>(null);
+  const [runs, setRuns] = useState<ProcessingRunSummary[]>([]);
+  const [datasets, setDatasets] = useState<DatasetRecord[]>([]);
+
+  const fetchDashboardData = async () => {
+    if (isFixtureMode) {
+      setLoading(false);
+      setError(null);
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const [fetchedRuns, fetchedDatasets] = await Promise.all([
+        apiClient.listProcessingRuns(),
+        apiClient.listDatasets(),
+      ]);
+      setRuns(fetchedRuns);
+      setDatasets(fetchedDatasets);
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setError(err);
+      } else {
+        setError(
+          new ApiError(
+            0,
+            '/runs',
+            'Failed to fetch processing dashboard telemetry',
+            'Ensure the FastAPI backend is running at http://localhost:8000 or enable "Fixture Preview" to inspect UI layout.',
+            err
+          )
+        );
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, [isFixtureMode]);
+
+  // Select active run summary: either latest live run or fixture summary
+  const activeSummary = isFixtureMode ? FIXTURE_RUN_SUMMARY : runs.length > 0 ? runs[0] : null;
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
@@ -25,6 +81,18 @@ export default function OverviewDashboardPage() {
         </div>
 
         <div className="flex items-center gap-2">
+          {!isFixtureMode && (
+            <button
+              onClick={fetchDashboardData}
+              disabled={loading}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono text-slate-300 bg-slate-900 hover:bg-slate-800 border border-slate-700 rounded transition-colors disabled:opacity-50"
+              title="Refresh telemetry from backend"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+              Refresh
+            </button>
+          )}
+
           <a
             href="/workspace"
             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-950 bg-cyan-400 hover:bg-cyan-300 rounded shadow-sm transition-colors"
@@ -35,81 +103,61 @@ export default function OverviewDashboardPage() {
         </div>
       </div>
 
-      {isFixtureMode ? (
-        /* Fixture Mode Preview Cards */
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="p-4 rounded-lg bg-slate-900 border border-slate-800">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-mono text-slate-400">Total Valid MODIS</span>
-                <SensorBadge sensor="MODIS" size="sm" />
-              </div>
-              <div className="text-2xl font-bold font-mono text-slate-100">
-                {FIXTURE_RUN_SUMMARY.counts.modis_valid_rows}
-              </div>
-              <p className="text-[11px] text-slate-500 mt-1">~1km nominal nadir resolution</p>
-            </div>
-
-            <div className="p-4 rounded-lg bg-slate-900 border border-slate-800">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-mono text-slate-400">Total Valid VIIRS</span>
-                <SensorBadge sensor="VIIRS" size="sm" />
-              </div>
-              <div className="text-2xl font-bold font-mono text-slate-100">
-                {FIXTURE_RUN_SUMMARY.counts.viirs_valid_rows}
-              </div>
-              <p className="text-[11px] text-slate-500 mt-1">375m I-band nadir resolution</p>
-            </div>
-
-            <div className="p-4 rounded-lg bg-slate-900 border border-slate-800">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-mono text-slate-400">Matched Pairs</span>
-                <MatchStatusBadge status="matched" size="sm" />
-              </div>
-              <div className="text-2xl font-bold font-mono text-emerald-400">
-                {FIXTURE_RUN_SUMMARY.counts.matched_count}
-              </div>
-              <p className="text-[11px] text-slate-500 mt-1">Spatial &le; 1500m &amp; &Delta;t &le; 3600s</p>
-            </div>
-
-            <div className="p-4 rounded-lg bg-slate-900 border border-slate-800">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-mono text-slate-400">Ambiguous Cases</span>
-                <MatchStatusBadge status="ambiguous" size="sm" />
-              </div>
-              <div className="text-2xl font-bold font-mono text-purple-400">
-                {FIXTURE_RUN_SUMMARY.counts.ambiguous_count}
-              </div>
-              <p className="text-[11px] text-slate-500 mt-1">Multiple candidates retained</p>
-            </div>
-          </div>
-
-          <div className="p-4 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-between">
-            <div>
-              <h3 className="text-sm font-semibold text-slate-200">Latest Run: {FIXTURE_RUN_SUMMARY.run_id}</h3>
-              <p className="text-xs text-slate-400 mt-0.5 font-mono">
-                Method v{FIXTURE_RUN_SUMMARY.method_version} &bull; Policy: {FIXTURE_RUN_SUMMARY.parameters.ambiguity_policy}
-              </p>
-            </div>
-            <a
-              href="/map"
-              className="inline-flex items-center gap-1 text-xs text-cyan-400 hover:text-cyan-300 font-medium"
-            >
-              Explore on Map <ArrowRight className="w-3.5 h-3.5" />
-            </a>
-          </div>
-        </div>
-      ) : (
-        /* Default Empty State when connected to live backend before any runs are submitted */
-        <EmptyState
-          title="No Harmonisation Processing Runs Found"
-          description="Connect and ingest MODIS and VIIRS CSV datasets or execute a spatial-temporal harmonisation run to view cross-sensor statistics. You can also toggle 'Fixture Preview' in the top header to inspect the UI layout."
-          actionText="Open Harmonisation Workspace"
-          onAction={() => {
-            window.location.href = '/workspace';
-          }}
-          icon={<Database className="w-6 h-6 text-cyan-400" />}
+      {/* Error state if backend fails and not in fixture mode (Rule 5: No silent fallback) */}
+      {!isFixtureMode && error && (
+        <ErrorAlert
+          title="Backend Connection Failed"
+          error={error}
+          onRetry={fetchDashboardData}
         />
+      )}
+
+      {/* Loading State */}
+      {loading && !isFixtureMode && (
+        <LoadingState
+          message="Retrieving processing runs and observation telemetry..."
+          subtext="Connecting to PostgreSQL/PostGIS through FastAPI backend."
+        />
+      )}
+
+      {/* Content Display */}
+      {!loading && (
+        <>
+          {activeSummary ? (
+            <div className="space-y-6">
+              {/* Study Area & Extent Context */}
+              <StudyContextBanner
+                runSummary={activeSummary}
+                regionName="Northern India & Indo-Gangetic Basin"
+                bbox={isFixtureMode ? FIXTURE_MODIS_DATASET.bbox : undefined}
+                timeRange={{
+                  min: isFixtureMode ? FIXTURE_MODIS_DATASET.min_time_utc : null,
+                  max: isFixtureMode ? FIXTURE_VIIRS_DATASET.max_time_utc : null,
+                }}
+                modisProduct={isFixtureMode ? FIXTURE_MODIS_DATASET.product_name : undefined}
+                viirsProduct={isFixtureMode ? FIXTURE_VIIRS_DATASET.product_name : undefined}
+              />
+
+              {/* Data Quality & Outcome KPIs (FR-17) */}
+              <QualityAndMatchKpiGrid summary={activeSummary} />
+
+              {/* Processing Run Details & Quick Actions (FR-20) */}
+              <LatestRunStatusCard summary={activeSummary} />
+            </div>
+          ) : (
+            !error && (
+              <EmptyState
+                title="No Harmonisation Processing Runs Recorded"
+                description="To view observation telemetry and cross-sensor match statistics, either upload datasets and execute a run in the Harmonisation Workspace, or toggle 'Fixture Preview' in the top header."
+                actionText="Go to Harmonisation Workspace"
+                onAction={() => {
+                  window.location.href = '/workspace';
+                }}
+                icon={<Database className="w-6 h-6 text-cyan-400" />}
+              />
+            )
+          )}
+        </>
       )}
     </div>
   );
