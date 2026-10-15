@@ -1,8 +1,9 @@
-"""Health check endpoint."""
+"""Health check endpoint adhering to docs/06_SYSTEM_ARCHITECTURE.md."""
 
 from datetime import datetime, timezone
 from fastapi import APIRouter
-from backend.app.schemas.run import HealthResponse
+from backend.app.config import settings
+from backend.app.schemas.runs import HealthResponse
 
 router = APIRouter(tags=["Health"])
 
@@ -11,8 +12,8 @@ router = APIRouter(tags=["Health"])
 def get_health() -> HealthResponse:
     return HealthResponse(
         status="ok",
-        service="Harmonisation of MODIS and VIIRS Hotspots API",
-        version="1.0.0",
+        service=settings.APP_NAME,
+        version=settings.APP_VERSION,
         timestamp=datetime.now(timezone.utc).isoformat(),
         database_connected=True,
     )

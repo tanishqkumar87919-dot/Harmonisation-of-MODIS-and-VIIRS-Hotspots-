@@ -1,41 +1,43 @@
-"""Export all Pydantic schemas for harmonisation backend."""
+"""Authoritative Pydantic v2 schemas for Harmonisation of MODIS and VIIRS Hotspots."""
 
-from backend.app.schemas.common import (
-    AmbiguityPolicy,
-    CandidateDecision,
-    MatchStatus,
-    ReviewStatus,
-    RowQualityStatus,
-    RunStatus,
-    SensorType,
-    TimeWindowRule,
-)
-from backend.app.schemas.dataset import (
+from backend.app.schemas.datasets import (
     DatasetRecord,
+    DatasetRecordSchema,
+    DatasetUploadMetadata,
+    DatasetValidationReportSchema,
+    RowQualityStatus,
     SchemaMappingPreviewItem,
+    SensorType,
     ValidationReport,
 )
-from backend.app.schemas.matching import (
+from backend.app.schemas.observations import (
+    StandardizedObservation,
+    StandardizedObservationSchema,
+)
+from backend.app.schemas.runs import (
+    AmbiguityPolicy,
+    BaselineComparisonMetrics,
+    CandidateDecision,
+    DistributionBin,
+    FrpDistribution,
     HarmonisedRecord,
     HarmonisedRecordProvenance,
+    HealthResponse,
+    InputDatasetIds,
     MatchCandidateRecord,
     MatchingParameters,
     MatchingQualityFilters,
-    RunCreateRequest,
-    ScoreWeights,
-)
-from backend.app.schemas.observation import StandardizedObservation
-from backend.app.schemas.run import (
-    BaselineComparisonMetrics,
-    DistributionBin,
-    FrpDistribution,
-    HealthResponse,
-    InputDatasetIds,
+    MatchStatus,
     ProcessingRunCounts,
     ProcessingRunRates,
     ProcessingRunSummary,
+    ReviewStatus,
+    RunCreateRequest,
     RunDetailedEvaluation,
+    RunStatus,
+    ScoreWeights,
     SensitivityGridPoint,
+    TimeWindowRule,
 )
 
 __all__ = [
@@ -47,9 +49,13 @@ __all__ = [
     "TimeWindowRule",
     "RunStatus",
     "ReviewStatus",
-    "DatasetRecord",
     "SchemaMappingPreviewItem",
+    "DatasetValidationReportSchema",
     "ValidationReport",
+    "DatasetRecordSchema",
+    "DatasetRecord",
+    "DatasetUploadMetadata",
+    "StandardizedObservationSchema",
     "StandardizedObservation",
     "MatchingQualityFilters",
     "ScoreWeights",
