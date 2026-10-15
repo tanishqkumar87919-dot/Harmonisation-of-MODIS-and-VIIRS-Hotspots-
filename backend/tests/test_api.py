@@ -103,8 +103,8 @@ def test_complete_harmonisation_run_workflow(client):
     eval_res = client.get(f"/api/runs/{run_id}/summary")
     assert eval_res.status_code == 200
     evaluation = eval_res.json()
-    assert len(evaluation["baselines"]) == 3
-    assert len(evaluation["sensitivity_grid"]) == 12
+    assert len(evaluation["baselines"]) == 4
+    assert len(evaluation["sensitivity_grid"]) == 20
 
     # 8. Export CSV
     csv_res = client.get(f"/api/runs/{run_id}/export?format=csv")

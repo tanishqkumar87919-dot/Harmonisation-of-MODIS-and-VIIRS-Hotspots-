@@ -49,12 +49,12 @@ def test_detailed_evaluation_generation():
     assert evaluation.run_id == "run-eval-test"
 
     # 1. Baseline comparisons
-    assert len(evaluation.baselines) == 3
-    raw_baseline = evaluation.baselines[0]
-    assert raw_baseline.total_records == len(m_eligible) + len(v_eligible)
+    assert len(evaluation.baselines) == 4
+    naive_baseline = next(b for b in evaluation.baselines if "Naive" in b.name)
+    assert naive_baseline.total_records == len(m_eligible) + len(v_eligible)
 
     # 2. Sensitivity grid
-    assert len(evaluation.sensitivity_grid) == 12  # 4 spatial x 3 temporal thresholds
+    assert len(evaluation.sensitivity_grid) == 20  # 5 spatial x 4 temporal thresholds
     for pt in evaluation.sensitivity_grid:
         assert pt.spatial_threshold_m > 0
         assert pt.temporal_threshold_s > 0

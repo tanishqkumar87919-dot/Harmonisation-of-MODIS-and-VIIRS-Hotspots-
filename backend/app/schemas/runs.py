@@ -198,6 +198,8 @@ class SensitivityGridPoint(BaseModel):
     unmatched_modis_count: int
     unmatched_viirs_count: int
     match_rate: float
+    viirs_match_rate: Optional[float] = None
+    ambiguity_rate: Optional[float] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -217,6 +219,13 @@ class FrpDistribution(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class CustomSensitivityRequest(BaseModel):
+    distance_grid_m: List[float] = Field(default_factory=lambda: [375.0, 750.0, 1000.0, 1500.0, 2000.0])
+    time_grid_s: List[float] = Field(default_factory=lambda: [900.0, 1800.0, 3600.0, 7200.0])
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class RunDetailedEvaluation(BaseModel):
     run_id: str
     baselines: List[BaselineComparisonMetrics] = Field(default_factory=list)
@@ -224,6 +233,9 @@ class RunDetailedEvaluation(BaseModel):
     spatial_distance_distribution: List[DistributionBin] = Field(default_factory=list)
     time_difference_distribution: List[DistributionBin] = Field(default_factory=list)
     frp_distribution: Optional[FrpDistribution] = None
+    four_baselines: Optional[Dict[str, Any]] = None
+    frp_percentiles: Optional[Dict[str, Dict[str, float]]] = None
+    temporal_hourly_distribution: Optional[List[DistributionBin]] = None
 
     model_config = ConfigDict(from_attributes=True)
 
