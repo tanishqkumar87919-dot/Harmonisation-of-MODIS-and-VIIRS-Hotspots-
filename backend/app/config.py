@@ -26,6 +26,14 @@ class Settings(BaseSettings):
     # Database connection string (optional; defaults to in-memory/sqlite)
     DATABASE_URL: Optional[str] = None
 
+    @property
+    def database_url(self) -> str:
+        return self.DATABASE_URL or "sqlite:///./modis_viirs.db"
+
+    @database_url.setter
+    def database_url(self, value: Optional[str]) -> None:
+        self.DATABASE_URL = value
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

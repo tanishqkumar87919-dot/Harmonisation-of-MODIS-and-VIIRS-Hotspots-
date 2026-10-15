@@ -1,5 +1,6 @@
-# Dependencies
 node_modules/
+node_modules.nosync/
+*.nosync
 .pnp
 .pnp.js
 .venv/
@@ -88,3 +89,10 @@ Thumbs.db
 !data/samples/*.geojson
 !data/samples/*.json
 !data/samples/README.md
+
+# SQLite / Local Databases
+*.db
+*.sqlite
+*.sqlite3
+modis_viirs_local.db
+
