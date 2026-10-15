@@ -1,0 +1,106 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Deterministic Test Fixture Manifest",
+  "description": "Authoritative registry of deterministic active-fire test fixtures for automated testing and validation per docs/04_DATA_SOURCES_AND_DICTIONARY.md and docs/10_TESTING_VALIDATION_DEPLOYMENT.md. Strictly synthetic fixtures; never treated as physical ground truth.",
+  "generated_at": "2026-10-15T13:00:00Z",
+  "dataset_version": "v1.0.0-fixtures",
+  "disclaimer": "LABELLED TEST FIXTURE MODE — NOT REAL SATELLITE OBSERVATIONS. Strictly intended for algorithm verification, edge-case coverage, and UI state validation.",
+  "fixtures": {
+    "sample_modis_fixture.csv": {
+      "filename": "sample_modis_fixture.csv",
+      "sensor": "MODIS",
+      "product_name": "MOD14_Terra_Collection_6_1",
+      "product_version": "C6.1",
+      "sha256": "e3d90a7b452d71b3b3ca3de8ee28baf6b085fb20585b91ffc57f4024ccf20f28",
+      "total_rows": 12,
+      "valid_rows": 10,
+      "warning_rows": 2,
+      "rejected_rows": 0,
+      "rejection_reasons": {},
+      "cases_covered": [
+        "Case 1: Identical coordinates and time (MODIS 001)",
+        "Case 2: Close spatiotemporal match (MODIS 002)",
+        "Case 3: Same location, time diff > 3600s (MODIS 003)",
+        "Case 4: Same time, distance > 1500m (MODIS 004)",
+        "Case 5: Ambiguous 1-to-3 cluster (MODIS 005)",
+        "Case 6: Dateline / 180 meridian crossing (MODIS 006)",
+        "Case 7: Unmatched isolated observations (MODIS 007, 008)",
+        "Case 8: Warning row with missing FRP (MODIS 009)",
+        "Case 8b: Warning row with low confidence (MODIS 010)",
+        "Standard active fire observations in study area (MODIS 011, 012)"
+      ]
+    },
+    "sample_viirs_fixture.csv": {
+      "filename": "sample_viirs_fixture.csv",
+      "sensor": "VIIRS",
+      "product_name": "VNP14IMGTDL_NPP_Collection_1",
+      "product_version": "v1.0",
+      "sha256": "882a77505e81584e045ddda48d1ef67487db149c04f20c8ab9a994428c32d803",
+      "total_rows": 15,
+      "valid_rows": 13,
+      "warning_rows": 2,
+      "rejected_rows": 0,
+      "rejection_reasons": {},
+      "cases_covered": [
+        "Case 1: Identical coordinates and time (VIIRS 001)",
+        "Case 2: Close spatiotemporal match (VIIRS 002)",
+        "Case 3: Same location, time diff > 3600s (VIIRS 003)",
+        "Case 4: Same time, distance > 1500m (VIIRS 004)",
+        "Case 5: Ambiguous cluster candidates (VIIRS 005A, 005B, 005C)",
+        "Case 6: Dateline / 180 meridian crossing (VIIRS 006)",
+        "Case 7: Unmatched isolated observations (VIIRS 007, 008, 009)",
+        "Case 8: Warning row with missing FRP (VIIRS 010)",
+        "Case 8b: Warning row with low confidence (VIIRS 011)",
+        "Standard active fire observations matching MODIS (VIIRS 012, 013)"
+      ]
+    },
+    "invalid_modis_fixture.csv": {
+      "filename": "invalid_modis_fixture.csv",
+      "sensor": "MODIS",
+      "product_name": "MOD14_Terra_Collection_6_1",
+      "product_version": "C6.1",
+      "sha256": "ecb9654c9812c4aa1f69b99d561ed1df9baab1370536a027e9fa6ee0f7772102",
+      "total_rows": 6,
+      "valid_rows": 1,
+      "warning_rows": 0,
+      "rejected_rows": 5,
+      "rejection_reasons": {
+        "duplicate_source_row": 1,
+        "invalid_or_out_of_range_latitude": 2,
+        "invalid_or_out_of_range_longitude": 1,
+        "malformed_or_missing_timestamp": 1
+      },
+      "cases_covered": [
+        "Case 9: Rejected rows with out-of-range latitude, out-of-range longitude, malformed timestamp, missing coordinate, and duplicate row"
+      ]
+    }
+  },
+  "matching_expectations": {
+    "default_thresholds": {
+      "max_distance_meters": 1500.0,
+      "max_time_difference_seconds": 3600.0,
+      "include_warnings": true
+    },
+    "retain_ambiguous": {
+      "matched_count": 5,
+      "ambiguous_count": 1,
+      "unmatched_modis_count": 6,
+      "unmatched_viirs_count": 7,
+      "total_output_records": 19
+    },
+    "one_to_one_deterministic": {
+      "matched_count": 6,
+      "ambiguous_count": 0,
+      "unmatched_modis_count": 6,
+      "unmatched_viirs_count": 9,
+      "total_output_records": 21
+    },
+    "many_to_many": {
+      "matched_count": 8,
+      "ambiguous_count": 0,
+      "unmatched_modis_count": 6,
+      "unmatched_viirs_count": 7,
+      "total_output_records": 21
+    }
+  }
+}

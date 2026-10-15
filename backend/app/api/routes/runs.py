@@ -266,7 +266,7 @@ def run_custom_sensitivity(
 def export_run_results(
     run_id: str,
     format: str = Query("csv", pattern="^(csv|geojson)$"),
-    status: Optional[str] = Query(None, description="Filter match_status"),
+    status_filter: Optional[str] = Query(None, alias="status", description="Filter match_status"),
     sensor: Optional[str] = Query(None, description="Filter sensor"),
     start_time: Optional[str] = Query(None),
     end_time: Optional[str] = Query(None),
@@ -296,7 +296,7 @@ def export_run_results(
 
     filtered_records, filters_applied = ExporterService.filter_records(
         records=records,
-        match_status=status,
+        match_status=status_filter,
         sensor=sensor,
         start_time=start_time,
         end_time=end_time,
