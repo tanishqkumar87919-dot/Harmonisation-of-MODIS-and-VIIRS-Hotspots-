@@ -1,84 +1,163 @@
 'use client';
 
-import React from 'react';
-import { BarChart3, AlertCircle } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
 import { useFixtureMode } from '@/lib/fixtures/FixtureContext';
-import { FIXTURE_EVALUATION } from '@/lib/fixtures/labelledTestFixtures';
+import {
+  FIXTURE_EVALUATION,
+  FIXTURE_RUN_SUMMARY,
+} from '@/lib/fixtures/labelledTestFixtures';
+import { apiClient, ApiError } from '@/lib/api/client';
+import { ProcessingRunSummary, RunDetailedEvaluation } from '@/types/harmonisation';
+import { SensorDistributionCharts } from '@/components/comparison/SensorDistributionCharts';
+import { MatchedPairDifferenceHistograms } from '@/components/comparison/MatchedPairDifferenceHistograms';
+import { FrpComparisonPanel } from '@/components/comparison/FrpComparisonPanel';
+import { EmptyState, ErrorAlert, LoadingState } from '@/components/common/StateViews';
+import { BarChart3, RefreshCw } from 'lucide-react';
 
 export default function SensorComparisonPage() {
   const { isFixtureMode } = useFixtureMode();
 
+  const [loading, setLoading] = useState<boolean>(!isFixtureMode);
+  const [error, setError] = useState<ApiError | null>(null);
+  const [runSummary, setRunSummary] = useState<ProcessingRunSummary | null>(
+    isFixtureMode ? FIXTURE_RUN_SUMMARY : null
+  );
+  const [evaluation, setEvaluation] = useState<RunDetailedEvaluation | null>(
+    isFixtureMode ? FIXTURE_EVALUATION : null
+  );
+
+  const fetchComparisonData = async () => {
+    if (isFixtureMode) {
+      setRunSummary(FIXTURE_RUN_SUMMARY);
+      setEvaluation(FIXTURE_EVALUATION);
+      setLoading(false);
+      setError(null);
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const runs = await apiClient.listProcessingRuns();
+      if (runs.length === 0) {
+        setRunSummary(null);
+        setEvaluation(null);
+        setLoading(false);
+        return;
+      }
+
+      const latestRun = runs[0];
+      setRunSummary(latestRun);
+
+      const evalData = await apiClient.getRunSummaryAndEvaluation(latestRun.run_id);
+      setEvaluation(evalData);
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setError(err);
+      } else {
+        setError(
+          new ApiError(
+            0,
+            '/runs/summary',
+            'Failed to load comparative sensor evaluations',
+            'Ensure the backend is online or enable "Fixture Preview" to inspect telemetry.',
+            err
+          )
+        );
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchComparisonData();
+  }, [isFixtureMode]);
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
-      <div className="border-b border-slate-800 pb-4">
-        <h2 className="text-xl font-bold tracking-tight text-slate-100 flex items-center gap-2">
-          <BarChart3 className="w-5 h-5 text-cyan-400" />
-          Sensor Comparison &amp; Physical Discrepancy Analysis
-        </h2>
-        <p className="text-xs text-slate-400 mt-1">
-          Bivariate analysis of spatial distances, temporal overpass deltas, and sensor detection sensitivities.
-        </p>
+      {/* Header */}
+      <div className="border-b border-slate-800 pb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-bold tracking-tight text-slate-100 flex items-center gap-2">
+            <BarChart3 className="w-5 h-5 text-cyan-400" />
+            Sensor Comparison &amp; Physical Discrepancy Analysis
+          </h2>
+          <p className="text-xs text-slate-400 mt-1">
+            Comparative evaluation of observation counts, diurnal overpass windows, spatial/temporal offsets, and FRP measurements.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {!isFixtureMode && (
+            <button
+              onClick={fetchComparisonData}
+              disabled={loading}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono text-slate-300 bg-slate-900 hover:bg-slate-800 border border-slate-700 rounded transition-colors disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+              Refresh Analytics
+            </button>
+          )}
+        </div>
       </div>
 
-      {isFixtureMode ? (
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="p-4 rounded-lg bg-slate-900 border border-slate-800">
-              <h3 className="text-sm font-semibold text-slate-200 mb-2">
-                Spatial Distance Distribution (&Delta;d in metres)
-              </h3>
-              <div className="space-y-2 font-mono text-xs">
-                {FIXTURE_EVALUATION.spatial_distance_distribution.map((bin, idx) => (
-                  <div key={idx} className="flex items-center justify-between">
-                    <span className="text-slate-400 w-24">{bin.bin}</span>
-                    <div className="flex-1 mx-3 bg-slate-950 h-3 rounded overflow-hidden">
-                      <div
-                        className="bg-emerald-500 h-full rounded"
-                        style={{ width: `${(bin.count / 35) * 100}%` }}
-                      />
-                    </div>
-                    <span className="text-slate-200 font-bold">{bin.count}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
+      {/* Error State */}
+      {!isFixtureMode && error && (
+        <ErrorAlert
+          title="Comparative Telemetry Retrieval Error"
+          error={error}
+          onRetry={fetchComparisonData}
+        />
+      )}
 
-            <div className="p-4 rounded-lg bg-slate-900 border border-slate-800">
-              <h3 className="text-sm font-semibold text-slate-200 mb-2">
-                Temporal Delta Distribution (&Delta;t in minutes)
-              </h3>
-              <div className="space-y-2 font-mono text-xs">
-                {FIXTURE_EVALUATION.time_difference_distribution.map((bin, idx) => (
-                  <div key={idx} className="flex items-center justify-between">
-                    <span className="text-slate-400 w-24">{bin.bin}</span>
-                    <div className="flex-1 mx-3 bg-slate-950 h-3 rounded overflow-hidden">
-                      <div
-                        className="bg-cyan-500 h-full rounded"
-                        style={{ width: `${(bin.count / 60) * 100}%` }}
-                      />
-                    </div>
-                    <span className="text-slate-200 font-bold">{bin.count}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+      {/* Loading State */}
+      {loading && !isFixtureMode && (
+        <LoadingState
+          message="Calculating sensor discrepancy distributions..."
+          subtext="Aggregating spatial deltas, temporal offsets, and FRP histograms."
+        />
+      )}
 
-          {/* FRP Scientific Disclaimer */}
-          <div className="p-4 rounded-lg bg-slate-900 border border-slate-800 space-y-2">
-            <div className="flex items-start gap-2 text-amber-300 text-xs font-semibold">
-              <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-              <span>Sensor Physics Rule 8 — Fire Radiative Power (FRP) Semantics</span>
+      {/* Main Content */}
+      {!loading && (
+        <>
+          {runSummary && evaluation ? (
+            <div className="space-y-6">
+              {/* Module 1: Sensor Observation Counts & Diurnal Distributions */}
+              <SensorDistributionCharts
+                counts={runSummary.counts}
+                rates={runSummary.rates}
+              />
+
+              {/* Module 2: Spatial & Temporal Difference Histograms */}
+              <MatchedPairDifferenceHistograms
+                spatialBins={evaluation.spatial_distance_distribution}
+                temporalBins={evaluation.time_difference_distribution}
+              />
+
+              {/* Module 3: FRP Comparative Analysis Panel (Rule 8) */}
+              <FrpComparisonPanel
+                modisFrpBins={evaluation.frp_distribution?.modis_frp || []}
+                viirsFrpBins={evaluation.frp_distribution?.viirs_frp || []}
+                disclaimer={evaluation.frp_distribution?.scientific_disclaimer || ''}
+              />
             </div>
-            <p className="text-xs text-slate-400 font-mono leading-relaxed">
-              {FIXTURE_EVALUATION.frp_distribution?.scientific_disclaimer}
-            </p>
-          </div>
-        </div>
-      ) : (
-        <div className="p-12 text-center text-slate-500 font-mono text-xs">
-          Execute a processing run or enable Fixture Mode to inspect comparative distributions.
-        </div>
+          ) : (
+            !error && (
+              <EmptyState
+                title="No Processing Telemetry Available for Comparison"
+                description="To view comparative sensor distributions, execute a processing run in the Workspace or enable 'Fixture Preview' in the top header."
+                actionText="Open Harmonisation Workspace"
+                onAction={() => {
+                  window.location.href = '/workspace';
+                }}
+                icon={<BarChart3 className="w-6 h-6 text-cyan-400" />}
+              />
+            )
+          )}
+        </>
       )}
     </div>
   );

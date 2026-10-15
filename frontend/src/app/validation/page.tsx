@@ -1,97 +1,135 @@
 'use client';
 
-import React from 'react';
-import { CheckSquare, GitCompare, Info } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { CheckSquare, GitCompare, Sliders, RefreshCw, AlertCircle } from 'lucide-react';
 import { useFixtureMode } from '@/lib/fixtures/FixtureContext';
 import { FIXTURE_EVALUATION } from '@/lib/fixtures/labelledTestFixtures';
+import { apiClient } from '@/lib/api/client';
+import { BaselineComparisonTable } from '@/components/validation/BaselineComparisonTable';
+import { ThresholdSensitivityMatrix } from '@/components/validation/ThresholdSensitivityMatrix';
+import { RunDetailedEvaluation } from '@/types/harmonisation';
 
 export default function ValidationSensitivityPage() {
   const { isFixtureMode } = useFixtureMode();
+  const [evaluationData, setEvaluationData] = useState<RunDetailedEvaluation | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadData() {
+      if (isFixtureMode) {
+        setEvaluationData(FIXTURE_EVALUATION);
+        setError(null);
+        return;
+      }
+
+      setLoading(true);
+      setError(null);
+      try {
+        const runs = await apiClient.listProcessingRuns();
+        if (runs && runs.length > 0 && isMounted) {
+          const latestRun = runs[0];
+          const evaluation = await apiClient.getRunSummaryAndEvaluation(latestRun.run_id);
+          if (isMounted) setEvaluationData(evaluation);
+        } else if (isMounted) {
+          setEvaluationData(null);
+        }
+      } catch (err: any) {
+        if (isMounted) {
+          setError(err.message || 'Failed to connect to backend evaluation endpoint');
+          setEvaluationData(null);
+        }
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    }
+
+    loadData();
+    return () => {
+      isMounted = false;
+    };
+  }, [isFixtureMode]);
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
-      <div className="border-b border-slate-800 pb-4">
-        <h2 className="text-xl font-bold tracking-tight text-slate-100 flex items-center gap-2">
-          <CheckSquare className="w-5 h-5 text-cyan-400" />
-          Validation &amp; Sensitivity Analysis
-        </h2>
-        <p className="text-xs text-slate-400 mt-1">
-          Rigorous benchmarking against unharmonised baselines and multi-threshold sensitivity matrices.
-        </p>
+      {/* Page Header */}
+      <div className="border-b border-slate-800 pb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-bold tracking-tight text-slate-100 flex items-center gap-2">
+            <CheckSquare className="w-5 h-5 text-cyan-400" />
+            Scientific Validation &amp; Sensitivity Analysis
+          </h2>
+          <p className="text-xs text-slate-400 mt-1">
+            Empirical benchmarking across four baseline strategies and multi-threshold spatiotemporal sensitivity matrices.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {evaluationData && (
+            <span className="text-[11px] font-mono px-2.5 py-1 rounded bg-slate-900 text-slate-300 border border-slate-800">
+              Run: {evaluationData.run_id}
+            </span>
+          )}
+        </div>
       </div>
 
-      {isFixtureMode ? (
-        <div className="space-y-6">
-          {/* Baseline Comparison Section */}
-          <div className="p-5 rounded-lg bg-slate-900 border border-slate-800">
-            <h3 className="text-sm font-semibold text-slate-200 mb-3 flex items-center gap-2">
-              <GitCompare className="w-4 h-4 text-cyan-400" />
-              Four-Baseline Scientific Comparison (docs/03_RESEARCH_METHODOLOGY.md)
-            </h3>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs font-mono">
-                <thead className="bg-slate-950 text-slate-400 border-b border-slate-800">
-                  <tr>
-                    <th className="p-2.5">Baseline Approach</th>
-                    <th className="p-2.5">Total Observations</th>
-                    <th className="p-2.5">Unique Spatiotemporal Sites</th>
-                    <th className="p-2.5">Estimated Duplication</th>
-                    <th className="p-2.5">Scientific Evaluation</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/60">
-                  {FIXTURE_EVALUATION.baselines.map((b, idx) => (
-                    <tr key={idx} className="hover:bg-slate-800/40">
-                      <td className="p-2.5 font-bold text-slate-200">{b.name}</td>
-                      <td className="p-2.5 text-slate-300">{b.total_records}</td>
-                      <td className="p-2.5 text-cyan-300">{b.unique_time_locations}</td>
-                      <td className="p-2.5 text-amber-400 font-semibold">{b.duplicate_estimate}</td>
-                      <td className="p-2.5 text-slate-400">{b.description}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+      {loading && (
+        <div className="p-12 text-center text-slate-400 font-mono text-xs flex items-center justify-center gap-2">
+          <RefreshCw className="w-4 h-4 animate-spin text-cyan-400" />
+          <span>Fetching scientific validation models from backend...</span>
+        </div>
+      )}
 
-          {/* Threshold Sensitivity Grid */}
-          <div className="p-5 rounded-lg bg-slate-900 border border-slate-800">
-            <h3 className="text-sm font-semibold text-slate-200 mb-3">
-              Spatial &amp; Temporal Sensitivity Matrix
-            </h3>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs font-mono">
-                <thead className="bg-slate-950 text-slate-400 border-b border-slate-800">
-                  <tr>
-                    <th className="p-2.5">Spatial Threshold (&Delta;d)</th>
-                    <th className="p-2.5">Temporal Threshold (&Delta;t)</th>
-                    <th className="p-2.5">Matched</th>
-                    <th className="p-2.5">Ambiguous</th>
-                    <th className="p-2.5">Unmatched MODIS</th>
-                    <th className="p-2.5">Unmatched VIIRS</th>
-                    <th className="p-2.5">MODIS Match Rate</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/60">
-                  {FIXTURE_EVALUATION.sensitivity_grid.map((pt, idx) => (
-                    <tr key={idx} className="hover:bg-slate-800/40">
-                      <td className="p-2.5 text-cyan-400">{pt.spatial_threshold_m} m</td>
-                      <td className="p-2.5 text-slate-300">{pt.temporal_threshold_s / 60} min</td>
-                      <td className="p-2.5 text-emerald-400 font-bold">{pt.matched_count}</td>
-                      <td className="p-2.5 text-purple-400">{pt.ambiguous_count}</td>
-                      <td className="p-2.5 text-amber-400">{pt.unmatched_modis_count}</td>
-                      <td className="p-2.5 text-blue-400">{pt.unmatched_viirs_count}</td>
-                      <td className="p-2.5 text-slate-200 font-bold">{(pt.match_rate * 100).toFixed(1)}%</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+      {error && !isFixtureMode && (
+        <div className="p-4 rounded-lg bg-red-950/20 border border-red-800/60 text-xs text-red-300 flex items-start gap-3">
+          <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+          <div>
+            <div className="font-semibold text-red-200">Scientific Validation Error</div>
+            <div className="text-[11px] text-red-300/90 mt-0.5 font-mono">{error}</div>
+            <div className="text-[11px] text-slate-400 mt-2">
+              Note: Connect the FastAPI backend or toggle &ldquo;Fixture Mode&rdquo; in the top navigation banner to view reference validation structures.
             </div>
           </div>
         </div>
-      ) : (
-        <div className="p-12 text-center text-slate-500 font-mono text-xs">
-          Validation metrics and sensitivity curves require a completed processing run.
+      )}
+
+      {!loading && !error && !evaluationData && !isFixtureMode && (
+        <div className="p-12 rounded-lg bg-slate-900 border border-slate-800 text-center space-y-3">
+          <Sliders className="w-8 h-8 text-slate-600 mx-auto" />
+          <h3 className="text-sm font-semibold text-slate-300 font-mono">No Active Validation Data</h3>
+          <p className="text-xs text-slate-500 max-w-md mx-auto">
+            Run a harmonisation job in the Workspace (/workspace) to generate baseline comparisons and sensitivity matrices.
+          </p>
+        </div>
+      )}
+
+      {/* Main Validation View */}
+      {evaluationData && (
+        <div className="space-y-8">
+          {/* Section 1: 4-Baseline Comparison */}
+          <section className="space-y-3">
+            <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider font-mono flex items-center gap-2">
+              <GitCompare className="w-4 h-4 text-cyan-400" />
+              1. Four-Baseline Methodological Comparison
+            </h3>
+            <BaselineComparisonTable
+              baselines={evaluationData.baselines}
+              totalInputObservations={452}
+            />
+          </section>
+
+          {/* Section 2: Threshold Sensitivity Matrix */}
+          <section className="space-y-3">
+            <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider font-mono flex items-center gap-2">
+              <Sliders className="w-4 h-4 text-cyan-400" />
+              2. Spatiotemporal Threshold Sensitivity Matrix
+            </h3>
+            <ThresholdSensitivityMatrix
+              sensitivityGrid={evaluationData.sensitivity_grid}
+            />
+          </section>
         </div>
       )}
     </div>

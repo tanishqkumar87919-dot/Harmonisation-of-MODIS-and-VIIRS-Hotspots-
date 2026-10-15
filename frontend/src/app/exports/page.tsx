@@ -1,90 +1,131 @@
 'use client';
 
-import React from 'react';
-import { Download, FileSpreadsheet, FileCode, ShieldCheck } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Download, AlertCircle, RefreshCw } from 'lucide-react';
 import { useFixtureMode } from '@/lib/fixtures/FixtureContext';
-import { FIXTURE_RUN_SUMMARY } from '@/lib/fixtures/labelledTestFixtures';
+import {
+  FIXTURE_RUN_SUMMARY,
+  FIXTURE_HARMONISED_RECORDS,
+} from '@/lib/fixtures/labelledTestFixtures';
+import { apiClient } from '@/lib/api/client';
+import { ExportDownloadCards } from '@/components/exports/ExportDownloadCards';
+import { PrintableRunReportSummary } from '@/components/exports/PrintableRunReportSummary';
+import { ProcessingRunSummary, HarmonisedRecord } from '@/types/harmonisation';
 
 export default function ReportsExportsPage() {
   const { isFixtureMode } = useFixtureMode();
+  const [runSummary, setRunSummary] = useState<ProcessingRunSummary | null>(null);
+  const [records, setRecords] = useState<HarmonisedRecord[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadData() {
+      if (isFixtureMode) {
+        setRunSummary(FIXTURE_RUN_SUMMARY);
+        setRecords(FIXTURE_HARMONISED_RECORDS);
+        setError(null);
+        return;
+      }
+
+      setLoading(true);
+      setError(null);
+      try {
+        const runs = await apiClient.listProcessingRuns();
+        if (runs && runs.length > 0 && isMounted) {
+          const latestRun = runs[0];
+          setRunSummary(latestRun);
+          const matches = await apiClient.getRunMatches(latestRun.run_id);
+          const unmatched = await apiClient.getRunUnmatched(latestRun.run_id);
+          if (isMounted) setRecords([...matches, ...unmatched]);
+        } else if (isMounted) {
+          setRunSummary(null);
+          setRecords([]);
+        }
+      } catch (err: any) {
+        if (isMounted) {
+          setError(err.message || 'Failed to connect to export endpoint');
+          setRunSummary(null);
+          setRecords([]);
+        }
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    }
+
+    loadData();
+    return () => {
+      isMounted = false;
+    };
+  }, [isFixtureMode]);
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
+      {/* Header */}
       <div className="border-b border-slate-800 pb-4">
         <h2 className="text-xl font-bold tracking-tight text-slate-100 flex items-center gap-2">
           <Download className="w-5 h-5 text-cyan-400" />
           Reproducible Reports &amp; Data Exports
         </h2>
         <p className="text-xs text-slate-400 mt-1">
-          Export harmonised active fire datasets with complete processing metadata, algorithm parameters, and source provenance.
+          Export harmonised active fire records in GIS-ready GeoJSON, normalized CSV, or print-ready scientific summaries.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="p-5 rounded-lg bg-slate-900 border border-slate-800 space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded bg-emerald-950 border border-emerald-800 text-emerald-400">
-              <FileSpreadsheet className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className="text-sm font-semibold text-slate-200">CSV Observation Export</h3>
-              <p className="text-xs text-slate-400 font-mono">Normalized tabular format with all 17 dictionary fields</p>
-            </div>
-          </div>
-          <p className="text-xs text-slate-400 leading-relaxed">
-            Includes linked MODIS and VIIRS identifiers, spatial distances, time differences, and match statuses.
-          </p>
-          <button
-            disabled={!isFixtureMode}
-            className="w-full py-2 px-3 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-slate-200 border border-slate-700 rounded text-xs font-mono transition-colors flex items-center justify-center gap-2"
-          >
-            <Download className="w-3.5 h-3.5" />
-            Export Harmonised CSV
-          </button>
+      {loading && (
+        <div className="p-12 text-center text-slate-400 font-mono text-xs flex items-center justify-center gap-2">
+          <RefreshCw className="w-4 h-4 animate-spin text-cyan-400" />
+          <span>Fetching export datasets and run metadata...</span>
         </div>
+      )}
 
-        <div className="p-5 rounded-lg bg-slate-900 border border-slate-800 space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded bg-cyan-950 border border-cyan-800 text-cyan-400">
-              <FileCode className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className="text-sm font-semibold text-slate-200">GeoJSON Feature Collection</h3>
-              <p className="text-xs text-slate-400 font-mono">EPSG:4326 standard geospatial format for GIS</p>
+      {error && !isFixtureMode && (
+        <div className="p-4 rounded-lg bg-red-950/20 border border-red-800/60 text-xs text-red-300 flex items-start gap-3">
+          <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+          <div>
+            <div className="font-semibold text-red-200">Export Generation Error</div>
+            <div className="text-[11px] text-red-300/90 mt-0.5 font-mono">{error}</div>
+            <div className="text-[11px] text-slate-400 mt-2">
+              Note: Connect the FastAPI backend or toggle &ldquo;Fixture Mode&rdquo; in the top banner to inspect export generators.
             </div>
           </div>
-          <p className="text-xs text-slate-400 leading-relaxed">
-            Directly compatible with QGIS, ArcGIS, and MapLibre. Features contain full provenance properties.
-          </p>
-          <button
-            disabled={!isFixtureMode}
-            className="w-full py-2 px-3 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-slate-200 border border-slate-700 rounded text-xs font-mono transition-colors flex items-center justify-center gap-2"
-          >
-            <Download className="w-3.5 h-3.5" />
-            Export GeoJSON (EPSG:4326)
-          </button>
         </div>
-      </div>
+      )}
 
-      {isFixtureMode && (
-        <div className="p-4 rounded-lg bg-slate-900 border border-slate-800 font-mono text-xs space-y-2">
-          <div className="flex items-center gap-2 text-emerald-400 font-semibold">
-            <ShieldCheck className="w-4 h-4" />
-            Reproducibility Manifest for Run: {FIXTURE_RUN_SUMMARY.run_id}
-          </div>
-          <pre className="p-3 rounded bg-slate-950 text-slate-300 text-[11px] overflow-x-auto">
-{JSON.stringify(
-  {
-    run_id: FIXTURE_RUN_SUMMARY.run_id,
-    method_version: FIXTURE_RUN_SUMMARY.method_version,
-    parameters: FIXTURE_RUN_SUMMARY.parameters,
-    counts: FIXTURE_RUN_SUMMARY.counts,
-    rates: FIXTURE_RUN_SUMMARY.rates,
-  },
-  null,
-  2
-)}
-          </pre>
+      {!loading && !error && !runSummary && !isFixtureMode && (
+        <div className="p-12 rounded-lg bg-slate-900 border border-slate-800 text-center space-y-3">
+          <Download className="w-8 h-8 text-slate-600 mx-auto" />
+          <h3 className="text-sm font-semibold text-slate-300 font-mono">No Active Run to Export</h3>
+          <p className="text-xs text-slate-500 max-w-md mx-auto">
+            Execute a harmonisation run in the Workspace (/workspace) to produce reproducible CSV, GeoJSON, and scientific report exports.
+          </p>
+        </div>
+      )}
+
+      {/* Main Export Modules */}
+      {runSummary && (
+        <div className="space-y-8">
+          {/* Section 1: Data Downloads */}
+          <section className="space-y-3">
+            <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider font-mono">
+              1. Scientific Data Downloads (CSV, GeoJSON, Reproducibility JSON)
+            </h3>
+            <ExportDownloadCards
+              runSummary={runSummary}
+              records={records}
+              isFiltered={false}
+            />
+          </section>
+
+          {/* Section 2: Printable Technical Report */}
+          <section className="space-y-3">
+            <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider font-mono">
+              2. Printable Processing Report Summary
+            </h3>
+            <PrintableRunReportSummary runSummary={runSummary} />
+          </section>
         </div>
       )}
     </div>
