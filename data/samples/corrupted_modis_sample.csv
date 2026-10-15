@@ -1,0 +1,6 @@
+latitude,longitude,brightness,scan,track,acq_date,acq_time,satellite,confidence,version,bright_t31,frp,daynight
+29.3541,76.8123,324.5,1.0,1.0,2023-05-01,0530,Terra,85,6.1NRT,298.2,28.4,D
+,76.8164,318.2,1.0,1.0,2023-05-01,0530,Terra,72,6.1NRT,295.1,19.2,D
+95.4102,76.9201,335.8,1.1,1.0,2023-05-01,0530,Terra,92,6.1NRT,301.4,45.7,D
+29.5021,195.1045,310.4,1.2,1.1,2023-05-01,0530,Terra,25,6.1NRT,292.0,11.5,D
+29.6200,77.2500,328.0,1.0,1.0,INVALID-DATE,9999,Terra,80,6.1NRT,297.5,31.0,D
